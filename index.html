@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Lamper Emotion Tracker</title>
+  <style>
+    :root {
+      --bg: #f4f4f4;
+      --card: #ffffff;
+      --text: #1f1f1f;
+      --muted: #666;
+      --border: #d9d9d9;
+      --accent: #222;
+      --cell-gap: 6px;
+      --radius: 12px;
+      --shadow: 0 10px 28px rgba(0,0,0,0.08);
+      --header-h: 54px;
+      --row-h: 68px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      padding: 16px;
+    }
+
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.7rem;
+      line-height: 1.1;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0 0 10px;
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    .required::after {
+      content: " *";
+      color: #b00020;
+    }
+
+    .radio-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .radio-grid.roles {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .radio-grid.steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .radio-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .radio-option label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 56px;
+      text-align: center;
+      padding: 10px 12px;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: 0.12s ease;
+    }
+
+    .radio-option input[type="radio"]:checked + label {
+      border-color: #111;
+      background: #111;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .small-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+      align-items: end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .field input[type="text"],
+    .field input[type="date"] {
+      width: 100%;
+      min-height: 50px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      padding: 10px 12px;
+      font-size: 1rem;
+      background: #fff;
+    }
+
+    .field input[readonly] {
+      background: #f8f8f8;
+      color: #444;
+    }
+
+    .emotion-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+    }
+
+    .emotion-board {
+      min-width: 980px;
+    }
+
+    .top-arrow {
+      position: relative;
+      height: 42px;
+      margin-left: 86px;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg,
+        #d51d21 0%,
+        #df5030 18%,
+        #ea7f2d 35%,
+        #f1b22f 52%,
+        #dbc233 63%,
+        #a9bf37 76%,
+        #6cb83a 88%,
+        #36b63b 100%);
+      clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 16px 50%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      font-weight: 800;
+      padding: 0 18px 0 32px;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .top-arrow .side {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.15);
+    }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: 76px repeat(9, minmax(92px, 1fr));
+      grid-template-rows: var(--header-h) repeat(5, var(--row-h));
+      gap: var(--cell-gap);
+      align-items: stretch;
+    }
+
+    .corner-empty {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .emotion-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6px;
+      color: #fff;
+      font-size: 0.93rem;
+      font-weight: 800;
+      line-height: 1.05;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    .intensity-col {
+      grid-column: 1;
+      grid-row: 2 / span 5;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .intensity-arrow {
+      width: 58px;
+      height: calc(var(--row-h) * 5 + var(--cell-gap) * 4);
+      background: linear-gradient(180deg, #858585 0%, #656565 100%);
+      clip-path: polygon(50% 0, 100% 11%, 100% 89%, 50% 100%, 0 89%, 0 11%);
+      border-radius: 12px;
+      color: #fff;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+    }
+
+    .intensity-word {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%) rotate(-90deg);
+      white-space: nowrap;
+      font-weight: 900;
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+    }
+
+    .intensity-top,
+    .intensity-bottom {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%) rotate(-90deg);
+      white-space: nowrap;
+      font-weight: 800;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .intensity-top { top: 46px; }
+    .intensity-bottom { bottom: 46px; }
+
+    .cell {
+      position: relative;
+      border: none;
+      border-radius: 10px;
+      min-height: 100%;
+      cursor: pointer;
+      padding: 0;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+    }
+
+    .cell:active {
+      transform: scale(0.985);
+    }
+
+    .cell.selected {
+      box-shadow:
+        inset 0 0 0 4px rgba(255,255,255,0.95),
+        0 0 0 3px rgba(0,0,0,0.14);
+    }
+
+    .cell.selected::after {
+      content: "✓";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 2rem;
+      font-weight: 900;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    }
+
+    .status-bar {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .selection-readout {
+      font-size: 0.98rem;
+      font-weight: 700;
+      min-height: 24px;
+    }
+
+    .selection-readout span {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .errors {
+      margin-top: 12px;
+      color: #b00020;
+      font-weight: 700;
+      min-height: 24px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button.action {
+      border: none;
+      border-radius: 14px;
+      min-height: 52px;
+      padding: 0 18px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #111;
+      color: #fff;
+    }
+
+    .secondary {
+      background: #ececec;
+      color: #111;
+    }
+
+    .success {
+      margin-top: 12px;
+      color: #0a7a2f;
+      font-weight: 800;
+      min-height: 24px;
+    }
+
+    .records {
+      margin-top: 20px;
+    }
+
+    .records-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .record-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .record-item {
+      border: 2px solid #e9e9e9;
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .record-item strong {
+      display: inline-block;
+      margin-right: 10px;
+    }
+
+    .record-item .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 5px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .meta-row,
+      .small-row {
+        grid-template-columns: 1fr;
+      }
+
+      .radio-grid.roles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .radio-grid.steps {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 10px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .radio-grid.roles {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <h1>Lamper Manual Workflow Emotion Tracker</h1>
+      <p class="sub">Designed for quick iPad use during live observation. Role, workflow step, and emotion selection are required.</p>
+
+      <div class="small-row">
+        <div class="field">
+          <label for="observerDate">Date</label>
+          <input id="observerDate" type="date" readonly />
+        </div>
+        <div class="field">
+          <label for="entryTime">Time Captured</label>
+          <input id="entryTime" type="text" readonly />
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <div>
+          <div class="section-title required">Role</div>
+          <div class="helper">Choose the role being observed.</div>
+          <div class="radio-grid roles" id="roleGroup">
+            <div class="radio-option">
+              <input type="radio" name="role" id="role-nurse-nav" value="Nurse Navigator">
+              <label for="role-nurse-nav">Nurse Navigator</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="role" id="role-scheduler" value="Scheduler / PCC">
+              <label for="role-scheduler">Scheduler / PCC</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="role" id="role-doctor" value="Doctor">
+              <label for="role-doctor">Doctor</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="role" id="role-resident" value="Resident">
+              <label for="role-resident">Resident</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="role" id="role-np" value="Nurse Practitioner / Advanced Provider">
+              <label for="role-np">NP / Advanced Provider</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="role" id="role-other" value="Other">
+              <label for="role-other">Other</label>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title required">Observed User ID</div>
+          <div class="helper">Use a neutral ID instead of initials.</div>
+          <div class="radio-grid roles" id="userGroup">
+            <div class="radio-option"><input type="radio" name="userId" id="u1" value="User 1"><label for="u1">User 1</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u2" value="User 2"><label for="u2">User 2</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u3" value="User 3"><label for="u3">User 3</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u4" value="User 4"><label for="u4">User 4</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u5" value="User 5"><label for="u5">User 5</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u6" value="User 6"><label for="u6">User 6</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u7" value="User 7"><label for="u7">User 7</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u8" value="User 8"><label for="u8">User 8</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u9" value="User 9"><label for="u9">User 9</label></div>
+            <div class="radio-option"><input type="radio" name="userId" id="u10" value="User 10"><label for="u10">User 10</label></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="section-title required">Workflow Step</div>
+        <div class="helper">Choose where the user is in the manual workflow.</div>
+        <div class="radio-grid steps" id="stepGroup">
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step1" value="Referral Intake / PCC Review"><label for="step1">Referral Intake / PCC Review</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step2" value="Patient Scheduled / Alerted"><label for="step2">Patient Scheduled / Alerted</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step3" value="Reviewing Patient Record"><label for="step3">Reviewing Patient Record</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step4" value="Checking Completeness / Missing Items"><label for="step4">Checking Completeness / Missing Items</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step5" value="Calling Patient"><label for="step5">Calling Patient</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step6" value="Coordinating With Physician"><label for="step6">Coordinating With Physician</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step7" value="Weekly Review / QA"><label for="step7">Weekly Review / QA</label></div>
+          <div class="radio-option"><input type="radio" name="workflowStep" id="step8" value="Post-Visit Follow-Up"><label for="step8">Post-Visit Follow-Up</label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="section-title required">Emotion + Intensity</div>
+      <div class="helper">Tap one square only. Nothing is selected by default.</div>
+
+      <div class="emotion-wrap">
+        <div class="emotion-board">
+          <div class="top-arrow">
+            <div class="side">👎 <span>Negative</span></div>
+            <div class="side"><span>Positive</span> 👍</div>
+          </div>
+
+          <div class="board-grid" id="boardGrid">
+            <div class="corner-empty"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <div class="selection-readout" id="selectionReadout">
+          <span>No emotion selected yet.</span>
+        </div>
+      </div>
+
+      <div class="errors" id="errorBox"></div>
+      <div class="success" id="successBox"></div>
+
+      <div class="actions">
+        <button class="action primary" id="saveBtn" type="button">Save Entry</button>
+        <button class="action secondary" id="clearBtn" type="button">Clear Form</button>
+        <button class="action secondary" id="exportBtn" type="button">Export CSV</button>
+      </div>
+
+      <div class="records">
+        <div class="records-top">
+          <div class="section-title" style="margin:0;">Saved Entries</div>
+          <div class="helper" style="margin:0;">Stored locally in this browser for now.</div>
+        </div>
+        <div class="record-list" id="recordList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const emotions = [
+      "Angry",
+      "Disappointed",
+      "Frustrated",
+      "Confused",
+      "Indifferent",
+      "Satisfied",
+      "Interested",
+      "Excited",
+      "Delighted"
+    ];
+
+    const intensityLabels = [
+      "Moderate",
+      "",
+      "",
+      "",
+      "Very Strong"
+    ];
+
+    const columnColors = [
+      [244, 198, 194],
+      [243, 205, 202],
+      [240, 213, 197],
+      [241, 217, 191],
+      [243, 218, 170],
+      [237, 217, 149],
+      [210, 221, 156],
+      [191, 218, 142],
+      [177, 220, 150]
+    ];
+
+    const selectedState = {
+      emotion: null,
+      emotionIndex: null,
+      intensity: null,
+      rowIndex: null,
+      sentimentSide: null,
+      cellId: null
+    };
+
+    const boardGrid = document.getElementById("boardGrid");
+    const selectionReadout = document.getElementById("selectionReadout");
+    const errorBox = document.getElementById("errorBox");
+    const successBox = document.getElementById("successBox");
+    const recordList = document.getElementById("recordList");
+    const observerDate = document.getElementById("observerDate");
+    const entryTime = document.getElementById("entryTime");
+
+    function pad(num) {
+      return String(num).padStart(2, "0");
+    }
+
+    function setNowFields() {
+      const now = new Date();
+      const localDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const localTime = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      observerDate.value = localDate;
+      entryTime.value = localTime;
+    }
+
+    function rgbToString(rgb, factor) {
+      const [r, g, b] = rgb;
+      const adj = (value) => Math.round(value * factor);
+      return `rgb(${adj(r)}, ${adj(g)}, ${adj(b)})`;
+    }
+
+    function buildHeaders() {
+      emotions.forEach((emotion, i) => {
+        const header = document.createElement("div");
+        header.className = "emotion-header";
+        header.style.gridColumn = String(i + 2);
+        header.style.gridRow = "1";
+        header.textContent = emotion.toUpperCase();
+        header.style.background = rgbToString(columnColors[i], 0.88);
+        boardGrid.appendChild(header);
+      });
+    }
+
+    function buildIntensityCol() {
+      const wrapper = document.createElement("div");
+      wrapper.className = "intensity-col";
+
+      const arrow = document.createElement("div");
+      arrow.className = "intensity-arrow";
+
+      const top = document.createElement("div");
+      top.className = "intensity-top";
+      top.textContent = "Moderate";
+
+      const middle = document.createElement("div");
+      middle.className = "intensity-word";
+      middle.textContent = "Intensity";
+
+      const bottom = document.createElement("div");
+      bottom.className = "intensity-bottom";
+      bottom.textContent = "Very Strong";
+
+      arrow.appendChild(top);
+      arrow.appendChild(middle);
+      arrow.appendChild(bottom);
+      wrapper.appendChild(arrow);
+      boardGrid.appendChild(wrapper);
+    }
+
+    function buildCells() {
+      for (let row = 0; row < 5; row += 1) {
+        const factor = 1 - ((4 - row) * 0.08); // bottom darker
+        for (let col = 0; col < 9; col += 1) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "cell";
+          btn.style.gridColumn = String(col + 2);
+          btn.style.gridRow = String(row + 2);
+          btn.style.background = rgbToString(columnColors[col], factor);
+          btn.dataset.emotion = emotions[col];
+          btn.dataset.emotionIndex = String(col + 1);
+          btn.dataset.rowIndex = String(row + 1);
+          btn.dataset.intensity = String(row + 1);
+          btn.dataset.sentiment = col <= 3 ? "Negative" : (col === 4 ? "Neutral" : "Positive");
+          btn.dataset.cellId = `r${row + 1}c${col + 1}`;
+          btn.setAttribute("aria-label", `${emotions[col]}, intensity ${row + 1} of 5`);
+
+          btn.addEventListener("click", () => selectCell(btn));
+          boardGrid.appendChild(btn);
+        }
+      }
+    }
+
+    function clearCellSelectionVisuals() {
+      document.querySelectorAll(".cell.selected").forEach(cell => {
+        cell.classList.remove("selected");
+      });
+    }
+
+    function selectCell(btn) {
+      clearCellSelectionVisuals();
+      btn.classList.add("selected");
+
+      selectedState.emotion = btn.dataset.emotion;
+      selectedState.emotionIndex = Number(btn.dataset.emotionIndex);
+      selectedState.intensity = Number(btn.dataset.intensity);
+      selectedState.rowIndex = Number(btn.dataset.rowIndex);
+      selectedState.sentimentSide = btn.dataset.sentiment;
+      selectedState.cellId = btn.dataset.cellId;
+
+      selectionReadout.innerHTML = `
+        Selected:
+        <strong>${selectedState.emotion}</strong>
+        · Intensity <strong>${selectedState.intensity}/5</strong>
+        · <strong>${selectedState.sentimentSide}</strong>
+      `;
+
+      errorBox.textContent = "";
+      successBox.textContent = "";
+    }
+
+    function getCheckedValue(name) {
+      const checked = document.querySelector(`input[name="${name}"]:checked`);
+      return checked ? checked.value : "";
+    }
+
+    function validateForm() {
+      const role = getCheckedValue("role");
+      const userId = getCheckedValue("userId");
+      const workflowStep = getCheckedValue("workflowStep");
+
+      const missing = [];
+      if (!role) missing.push("role");
+      if (!userId) missing.push("observed user ID");
+      if (!workflowStep) missing.push("workflow step");
+      if (!selectedState.emotion) missing.push("emotion");
+
+      if (missing.length) {
+        errorBox.textContent = `Please complete: ${missing.join(", ")}.`;
+        successBox.textContent = "";
+        return null;
+      }
+
+      errorBox.textContent = "";
+      return {
+        capturedDate: observerDate.value,
+        capturedTime: entryTime.value,
+        role,
+        userId,
+        workflowStep,
+        emotion: selectedState.emotion,
+        emotionIndex: selectedState.emotionIndex,
+        intensity: selectedState.intensity,
+        rowIndex: selectedState.rowIndex,
+        sentimentSide: selectedState.sentimentSide,
+        cellId: selectedState.cellId,
+        savedAtIso: new Date().toISOString()
+      };
+    }
+
+    function getEntries() {
+      const raw = localStorage.getItem("lamperEmotionEntries");
+      return raw ? JSON.parse(raw) : [];
+    }
+
+    function setEntries(entries) {
+      localStorage.setItem("lamperEmotionEntries", JSON.stringify(entries));
+    }
+
+    function renderEntries() {
+      const entries = getEntries();
+      recordList.innerHTML = "";
+
+      if (!entries.length) {
+        recordList.innerHTML = `<div class="record-item"><strong>No entries yet.</strong><div class="meta">Saved records will appear here.</div></div>`;
+        return;
+      }
+
+      entries.slice().reverse().forEach((entry) => {
+        const item = document.createElement("div");
+        item.className = "record-item";
+        item.innerHTML = `
+          <strong>${entry.userId}</strong> ${entry.role}
+          <div class="meta">
+            ${entry.capturedDate} ${entry.capturedTime}<br>
+            Step: ${entry.workflowStep}<br>
+            Emotion: ${entry.emotion} · Intensity ${entry.intensity}/5 · ${entry.sentimentSide}<br>
+            Cell: ${entry.cellId}
+          </div>
+        `;
+        recordList.appendChild(item);
+      });
+    }
+
+    function clearForm() {
+      document.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.checked = false;
+      });
+
+      clearCellSelectionVisuals();
+
+      selectedState.emotion = null;
+      selectedState.emotionIndex = null;
+      selectedState.intensity = null;
+      selectedState.rowIndex = null;
+      selectedState.sentimentSide = null;
+      selectedState.cellId = null;
+
+      selectionReadout.innerHTML = `<span>No emotion selected yet.</span>`;
+      errorBox.textContent = "";
+      successBox.textContent = "";
+      setNowFields();
+    }
+
+    function saveEntry() {
+      const data = validateForm();
+      if (!data) return;
+
+      const entries = getEntries();
+      entries.push(data);
+      setEntries(entries);
+      renderEntries();
+      successBox.textContent = "Entry saved on this device.";
+      setNowFields();
+    }
+
+    function exportCSV() {
+      const entries = getEntries();
+      if (!entries.length) {
+        errorBox.textContent = "No entries to export yet.";
+        successBox.textContent = "";
+        return;
+      }
+
+      const headers = [
+        "capturedDate",
+        "capturedTime",
+        "role",
+        "userId",
+        "workflowStep",
+        "emotion",
+        "emotionIndex",
+        "intensity",
+        "rowIndex",
+        "sentimentSide",
+        "cellId",
+        "savedAtIso"
+      ];
+
+      const escapeCsv = (value) => {
+        const str = String(value ?? "");
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const csv = [
+        headers.join(","),
+        ...entries.map(entry => headers.map(h => escapeCsv(entry[h])).join(","))
+      ].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStamp = observerDate.value || "export";
+      a.href = url;
+      a.download = `lamper-emotion-tracker-${dateStamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      errorBox.textContent = "";
+      successBox.textContent = "CSV exported.";
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", saveEntry);
+    document.getElementById("clearBtn").addEventListener("click", clearForm);
+    document.getElementById("exportBtn").addEventListener("click", exportCSV);
+
+    buildHeaders();
+    buildIntensityCol();
+    buildCells();
+    setNowFields();
+    renderEntries();
+  </script>
+</body>
+</html>
